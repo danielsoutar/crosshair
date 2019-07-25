@@ -76,22 +76,25 @@ def dispatch(X, F, P, S, TL, BR):
 
     block = X[:, top_left_y:bot_right_y+1, top_left_x:bot_right_x+1, :]
 
-    print("block size:", block.shape)
-    print("filter size:", F.shape)
+    print('block size:', block.shape)
+    print('filter size:', F.shape)
     block_N, block_H, block_W, block_C = block.shape
 
     # Padding and stride both 1 to ensure same-size output.
     out_h = compute_out_dimension(block_H, F.shape[2], P, S)
     out_w = compute_out_dimension(block_W, F.shape[3], P, S)
-    assert out_h == block_H, "Block's output height {0} should be equal to input height {1}!".format(out_h, block_H)
-    assert out_w == block_W, "Block's output width {0} should be equal to input width {1}!".format(out_w, block_W)
+    assert out_h == block_H, \
+        'Block\'s output height {0} should be equal to input height {1}!'.format(out_h, block_H)
+    assert out_w == block_W, \
+        'Block\'s output width {0} should be equal to input width {1}!'.format(out_w, block_W)
 
     out = conv2d_forward(block, F, P, S)
 
     in_shape = block.shape
     out_shape = out.shape
     shape_match = out_shape == in_shape
-    assert shape_match, 'Convolution of block not giving expected output size: input shape is {0} but output shape is {1}'.format(in_shape, out_shape)
+    assert shape_match, \
+        'Convolution of block not giving expected output size: input shape is {0} but output shape is {1}'.format(in_shape, out_shape)
 
     return out
 
