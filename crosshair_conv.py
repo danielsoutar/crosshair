@@ -76,8 +76,6 @@ def dispatch(X, F, P, S, TL, BR):
 
     block = X[:, top_left_y:bot_right_y+1, top_left_x:bot_right_x+1, :]
 
-    print('block size:', block.shape)
-    print('filter size:', F.shape)
     block_N, block_H, block_W, block_C = block.shape
 
     # Padding and stride both 1 to ensure same-size output.
@@ -112,6 +110,9 @@ def crosshair_conv(X, Cr_F, Cr_P, Cr_S, Cr_TL, Cr_BR, Per_F, Per_P, Per_S):
     output has the same spatial dimensions as the input, although the depth
     may differ.
 
+    Note that the current implementation uses zero-padding for the cross-hair,
+    rather than neighbouring pixels in the peripheral block.
+
     +--------------+
     |              | <-- Peripheral block
     |   +------+   |
@@ -122,12 +123,14 @@ def crosshair_conv(X, Cr_F, Cr_P, Cr_S, Cr_TL, Cr_BR, Per_F, Per_P, Per_S):
 
     Args:
         X (4D tensor-like): input tensor in NHWC format.
-        Cr_F (4D tensor-like): filter tensor in FCHW format for cross-hair block.
+        Cr_F (4D tensor-like): cross-hair block filter tensor in FCHW format.
         Cr_P (int): padding used for cross-hair block convolution.
         Cr_S (int): stride for cross-hair block convolution.
-        Cr_TL (int, int): upper-left position to calculate the cross-hair block.
-        Cr_BR (int, int): bottom-right position to calculate the cross-hair block.
-        Per_F (4D tensor-like): filter tensor in FCHW format for peripheral block.
+        Cr_TL (int, int): upper-left position to calculate cross-hair block.
+                          Assumes x,y coordinates with 0,0 as the top-left cell.
+        Cr_BR (int, int): bottom-right position to calculate cross-hair block.
+                          Assumes x,y coordinates with 0,0 as the top-left cell.
+        Per_F (4D tensor-like): peripheral block filter tensor in FCHW format.
         Per_P (int): padding used for peripheral block convolution.
         Per_S (int): stride for peripheral block convolution.
 
@@ -174,3 +177,25 @@ def crosshair_conv(X, Cr_F, Cr_P, Cr_S, Cr_TL, Cr_BR, Per_F, Per_P, Per_S):
     out[:, bot_right_y+1:In_H, 0:In_W, :] = peripheral_block_lower_out
 
     return out
+
+
+def iota_initialised_input_tensor(N, H, W, C):
+    return np.array([i for i in range(N*H*W*C)]).reshape((N, H, W, C))
+
+
+def iota_initialised_filter_tensor(F, C, H, W):
+    return iota_initialised_input_tensor(F, C, H, W)
+
+
+if __name__ == "__main__":
+    X = iota_initialised_input_tensor(1, 9, 9, 1)
+
+    Cr_F, Cr_P, Cr_S = iota_initialised_filter_tensor(1, 1, 3, 3), 1, 1
+    Cr_TL, Cr_BR = (3, 3), (5, 5)
+    Pe_F, Pe_P, Pe_S = iota_initialised_filter_tensor(1, 1, 3, 3), 1, 1
+
+    crosshair_block_args = (Cr_F, Cr_P, Cr_S, Cr_TL, Cr_BR)
+    peripheral_block_args = (Pe_F, Pe_P, Pe_S)
+
+    out = crosshair_conv(X, *crosshair_block_args, *peripheral_block_args)
+    print(out.reshape((9, 9)))
